@@ -12,6 +12,14 @@ def contains_date(task):
     True
     >>> contains_date('[[date 05/05/16]]')
     True
+    >>> contains_date('[[date 05/05/16')
+    False
+    >>> contains_date('date 05/05/16]]')
+    False
+    >>> contains_date('[[ 05/05/16]]')
+    False
+    >>> contains_date('[[date ]]')
+    False
 
     """
     pass
