@@ -47,7 +47,7 @@ def print_usage(error=None):
             Instead of overwriting the output file, append Org output to the end of it."""
     print(usage)
     if isinstance(error, str):
-        print("Error: %s" % error)
+        print("%s" % error)
 
 if __name__ == '__main__':
     import doctest
@@ -55,7 +55,6 @@ if __name__ == '__main__':
 
     # Exclude the path of this file from the argument list
     args = sys.argv[1:]
-    args = ["/home/dane/Desktop/todoist archive/", "/home/dane/Desktop/test.org"]
 
     # There must be 2 arguments
     if not 2 <= len(args) <= 3:
@@ -104,3 +103,4 @@ if __name__ == '__main__':
     for line in output_lines:
         f.write("%s\n" % line)
     f.close()
+    print("Successfully created and populated '%s'!" % os.path.basename(args[1]))

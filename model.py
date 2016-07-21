@@ -1,7 +1,11 @@
 #!/usr/bin/python
 
 def process_todoist_projects(project_dict):
-    output_lines = []
+    output_lines = [
+        "* Projects",
+        "#+CATEGORY: Projects"
+    ]
+    
     rows_to_remove = [
         # \xef\xbb\xbf appeared when importing the csv files using the csv module
         ['\xef\xbb\xbfTYPE', 'CONTENT', 'PRIORITY', 'INDENT', 'AUTHOR', 'RESPONSIBLE', 'DATE', 'DATE_LANG', 'TIMEZONE'],
@@ -22,7 +26,7 @@ def process_todoist_projects(project_dict):
         # Process each project and add the resulting Org lines onto the end of
         # output_lines
         output_lines.extend(translate_todoist_project(project_name, project_dict[k]))
-        
+
     return output_lines
 
 def translate_todoist_project(project_name, csv_rows):
@@ -88,4 +92,5 @@ def translate_project_task(task, notes):
     return result
 
 def org_timestamp(todoist_date):
+    # TODO Implement function
     return todoist_date
