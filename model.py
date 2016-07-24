@@ -1,67 +1,96 @@
 #!/usr/bin/python
+from operator import itemgetter
+from dateutil import parser
+import datetime
+from datetime import date
 
-def process_todoist_projects(project_dict):
+def process_todoist_resources(user_resources):
+    """Process Todoist user resources and return a list of project dictionaries"""
+    projects = user_resources["projects"]
+    items = user_resources["items"] # tasks
+    notes = user_resources["notes"] # comments
+
+    # Initialise the items list in each project dictionary
+    for project in projects:
+        project["items"] = []
+
+    # Initialise the notes list in each item dictionary
+    for item in items:
+        item["notes"] = []
+
+    # Find all items for each project and add them to the project's dictionary
+    for item in items:
+        # Find the project
+        for project in projects:
+            if item["project_id"] == project["id"]:
+                # Add this item to the list
+                project["items"].append(item)
+                break
+
+        # Find all of the notes for this item
+        for note in notes:
+            if note["item_id"] == item["id"]:
+                # Add this note to the list
+                item["notes"].append(note)
+
+    # Sort each project's list of tasks on item_order so they are output in the
+    # right order. This is necessary because parent IDs of items and projects
+    # are not stored, only their indent and order values.
+    for project in projects:
+        project["items"] = sorted(project["items"], key=itemgetter("item_order"))
+
+    # Do the same for the list of projects and the list of notes for each item
+    for item in items:
+        # Sort by ID instead of item_order because notes have no item_order
+        # attribute
+        item["notes"] = sorted(item["notes"], key=itemgetter("id"))
+
+    projects = sorted(projects, key=itemgetter("item_order"))
+    return projects
+
+def process_todoist_projects(projects):
     output_lines = [
         "* Projects",
         "#+CATEGORY: Projects"
     ]
-    
-    rows_to_remove = [
-        # \xef\xbb\xbf appeared when importing the csv files using the csv module
-        ['\xef\xbb\xbfTYPE', 'CONTENT', 'PRIORITY', 'INDENT', 'AUTHOR', 'RESPONSIBLE', 'DATE', 'DATE_LANG', 'TIMEZONE'],
-        ['TYPE', 'CONTENT', 'PRIORITY', 'INDENT', 'AUTHOR', 'RESPONSIBLE', 'DATE', 'DATE_LANG', 'TIMEZONE'],
-        ['', '', '', '', '', '', '', '', '']
-    ]
 
-    for k in project_dict:
-        # Remove any all empty or CSV identifier rows
-        for i, row in enumerate(project_dict[k]):
-            if row in rows_to_remove:
-                # Remove the row
-                project_dict[k].pop(i)
-
-        # Get the project named without the file extension or Todoist project ID
-        project_name = k[:-16] # " [XXXXXXXXX].csv" is 16 characters
-
-        # Process each project and add the resulting Org lines onto the end of
-        # output_lines
-        output_lines.extend(translate_todoist_project(project_name, project_dict[k]))
+    # Process each project and add the resulting Org lines onto the end of
+    # output_lines
+    for project in projects:
+        output_lines.extend(process_todoist_project(project))
 
     return output_lines
 
-def translate_todoist_project(project_name, csv_rows):
+def process_todoist_project(project):
     """Translate a Todoist project and return a list of lines to add to the
     output Org file"""
+    # Generate the stars using the indent value
+    stars = "*"
+    for x in range(0, int(project["indent"])):
+        stars += "*"
+
     output_lines = [
-        "** %s" % project_name,
-        "#+CATEGORY: %s" % project_name,
+        "%s %s" % (stars, project["name"]),
     ]
 
-    # Collect tasks and their comments for processing
-    items = []
-    latest_task = -1
-    for i, row in enumerate(csv_rows):
-        _type, content, _, indent, _, _, _, _, _ = row
-        if _type == "task":
-            items.append([row, []])
-            latest_task += 1
-        elif _type == "note":
-            items[latest_task][1].append(content)
-
-    for task, notes in items:
-        output_lines.extend(translate_project_task(task, notes))
+    # Process each item
+    for item in project["items"]:
+        output_lines.extend(process_todoist_item(item, stars))
 
     return output_lines
 
-def translate_project_task(task, notes):
-    # The Todoist CSV column identifiers are as below
-    # TYPE, CONTENT, PRIORITY, INDENT, AUTHOR, RESPONSIBLE, DATE, DATE_LANG, TIMEZONE
-    _type, content, priority, indent, _, _, date, _, _ = task
-    assert _type == "task" # Comments should be in the notes list
-    result = []
+def process_todoist_item(item, project_stars):
+    content = item["content"]
+    priority = item["priority"]
+    indent = item["indent"]
+    due_date_utc = item["due_date_utc"]
+    date_string = item["date_string"]
+    notes = item["notes"]
+    all_day = item["all_day"]
+    output_lines = []
 
     # Generate the stars using the indent value
-    stars = "**"
+    stars = project_stars
     for x in range(0, int(indent)):
         stars += "*"
     # Make an equivalent indentation string using spaces for lines like
@@ -70,27 +99,44 @@ def translate_project_task(task, notes):
 
     # Deal with priorities
     priority = {
-        "1": "[#A] ",
-        "2": "[#B] ",
-        "3": "[#C] ",
-        # Todoist does not display priority 4 tasks as having any priority
-        "4": "",
+        4: "[#A] ",
+        3: "[#B] ",
+        2: "[#C] ",
+        # Todoist does not display priority 1 tasks as having any priority
+        1: "",
     }[priority]
 
-    # Add lines to the result list
-    result.append("%s TODO %s%s" % (stars, priority, content))
-    if date != "":
-        result.append("%s SCHEDULED: %s" % (spaces, org_timestamp(date)))
+    # Add lines to the output_lines list
+    output_lines.append("%s TODO %s%s" % (stars, priority, content))
+    if due_date_utc is not None:
+        timestamp = org_timestamp(due_date_utc, date_string, all_day)
+        output_lines.append("%s SCHEDULED: %s" % (spaces, timestamp))
 
     # Text under headings appears to be placed after the lines normally
     # generated by Org mode, such as DEADLINE and SCHEDULED
     # Todoist comments will be placed here
     for note in notes:
-        result.append("%s %s" % (spaces, note))
+        output_lines.append("%s %s" % (spaces, note["content"]))
 
-    result.append("") # Add an empty line after each heading's content
-    return result
+    output_lines.append("") # Add an empty line after each heading's content
+    return output_lines
 
-def org_timestamp(todoist_date):
-    # TODO Implement function
-    return todoist_date
+def org_timestamp(due_date_utc, date_string, all_day):
+    dateobj = parser.parse(due_date_utc)
+
+    if all_day:
+        # Don't add the time if the task is an "all-day" task
+        timestamp = dateobj.strftime("<%Y-%m-%d %a>")
+    else:
+        timestamp = dateobj.strftime("<%Y-%m-%d %a %H:%M>")
+    timestamp = transform_if_recurring(timestamp, date_string)
+    return timestamp
+
+
+def transform_if_recurring(timestamp, date_string):
+    if "every" in date_string.lower():
+        # TODO implement this
+        pass
+        # print(date_string)
+
+    return timestamp
