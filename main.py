@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import csv, sys, os.path, os, urllib, json
+import sys, os.path, os, urllib, json
 import model
 from fnmatch import fnmatch
 from urllib.request import urlopen
@@ -47,6 +47,19 @@ def print_usage(error=None):
         print("%s" % error)
     print(usage)
 
+
+def touch_file(filepath): open(filepath, 'a').close()
+
+def write_to_file(filepath, output_lines, append=False):
+    if append:
+        f = open(filepath, 'a')
+    else:
+        f = open(filepath, 'w')
+    # Write to the output file and close it
+    for line in output_lines:
+        f.write("%s\n" % line)
+    f.close()
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod(verbose=False)
@@ -71,7 +84,17 @@ if __name__ == '__main__':
 
     # If the output path doesn't exist then create it as a file
     if not os.path.exists(args[1]):
-        open(args[1], 'a').close()
+        try:
+            touch_file(args[1])
+        except OSError as e:
+            print_usage(e.message)
+            exit()
+
+    # Account for options
+    if len(args) == 3 and (args[2] == "-a" or args[2] == "--append-output"):
+        append = True
+    else:
+        append = False
 
     # Process the user resources
     projects = model.process_todoist_resources(user_resources)
@@ -79,21 +102,24 @@ if __name__ == '__main__':
     # One file for all projects
     if os.path.isfile(args[1]):
         output_lines = model.process_todoist_projects(projects)
-
-        # Account for options
-        if len(args) == 3 and (args[2] == "-a" or args[2] == "--append-output"):
-            f = open(args[1], 'a')
-        else:
-            f = open(args[1], 'w')
-
-        # Write to the output file and close it
-        for line in output_lines:
-            f.write("%s\n" % line)
-        f.close()
+        write_to_file(args[1], output_lines, append)
         print("Successfully created and populated '%s'!" % os.path.basename(args[1]))
 
     # One file for each project
     elif os.path.isdir(args[1]):
-        # TODO: Implement one file per project
-        print("This feature is not yet implemented")
+        for project in projects:
+            output_lines = ["#+%s" % project["name"]]
+            output_lines.extend(model.process_todoist_project(project, initial_heading_level=0))
+
+            # Construct a file path for the project file
+            output_filepath = os.path.join(args[1], project["name"] + ".org")
+
+            # Make sure the file exists
+            touch_file(output_filepath)
+
+            write_to_file(output_filepath, output_lines, append)
+            print("Successfully created and populated '%s'!" % os.path.basename(output_filepath))
+
+    else:
+        print_usage("Error: output file path is neither a file or a directory!")
         exit()
