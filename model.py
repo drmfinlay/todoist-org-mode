@@ -61,13 +61,13 @@ def process_todoist_projects(projects):
 
     return output_lines
 
-def process_todoist_project(project):
+def process_todoist_project(project, initial_heading_level=1):
     """Translate a Todoist project and return a list of lines to add to the
     output Org file"""
     # Generate the stars using the indent value
-    stars = "*"
-    for x in range(0, int(project["indent"])):
-        stars += "*"
+    stars = ""
+    indent = project["indent"]
+    for x in range(0, indent + initial_heading_level): stars += "*"
 
     output_lines = [
         "%s %s" % (stars, project["name"]),
@@ -91,8 +91,8 @@ def process_todoist_item(item, project_stars):
 
     # Generate the stars using the indent value
     stars = project_stars
-    for x in range(0, int(indent)):
-        stars += "*"
+    for x in range(0, indent): stars += "*"
+
     # Make an equivalent indentation string using spaces for lines like
     # "  SCHEDULED: <2016-07-22 Fri>"
     spaces = stars.replace("*", " ")
