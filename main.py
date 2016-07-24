@@ -1,7 +1,9 @@
 #!/usr/bin/python
-import csv, sys, os.path, os
-from fnmatch import fnmatch
+import csv, sys, os.path, os, urllib, json
 import model
+from fnmatch import fnmatch
+from urllib.request import urlopen
+from urllib.parse import urlencode
 
 # Adapted from:  http://stackoverflow.com/questions/38987/how-can-i-merge-two-python-dictionaries-in-a-single-expression?rq=1
 def merge_two_dicts(x, y):
@@ -31,6 +33,24 @@ def collect_csv_files(dirpath):
                 csv_files.append(os.path.join(path, name))
     return csv_files
 
+def read_todoist_resources(token):
+    """Read user resources from https://todoist.com/API/v7/sync using the specified API token.
+    See https://developer.todoist.com/#read-resources
+
+    token should be a string representation of the users API token, e.g. '0123456789abcdef0123456789abcdef01234567'"""
+    resource_types = '["items", "notes", "projects", "user"]'
+    url = "https://todoist.com/API/v7/sync"
+    data = urlencode({
+        "token": token,
+        "sync_token": "*",
+        "resource_types": resource_types,
+    })
+    fd = urlopen(url, data.encode('utf-8'))
+    content = fd.read()
+    fd.close()
+    return json.loads(content.decode('utf-8'))
+
+
 def process_csv(filepath):
     """Take a file path to a .csv file and return a dictionary mapping the file name to a list of processed CSV rows.
     """
@@ -40,9 +60,7 @@ def process_csv(filepath):
         return {filename: [row for row in reader]}
 
 def print_usage(error=None):
-    usage = """Usage: <input-directory / .csv file> <output-file> [options]
-    If used, input directory should contain at least one .csv file
-    Options
+    usage = """Usage: Todoist-API-key output-file [options]
         -a, --append-output
             Instead of overwriting the output file, append Org output to the end of it."""
     print(usage)
