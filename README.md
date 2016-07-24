@@ -2,10 +2,15 @@
 Transform Todoist projects into Org-mode files
 
 ## What it does
-Given a single CSV file or multiple CSV files in a directory, produce an Emacs Org mode file containing all Todoist projects represented by the CSV file(s).
+Given a Todoist API token, main.py will retrieve project, task and comment data from Todoist using the official API available [here](https://developer.todoist.com/). The program will then transform this data into Emacs Org format into the file you specify.
+
+## Python Library Dependencies
+  - urllib
+  - dateutil
+  - datetime
 
 ## How to run the program
 Run main.py with the following arguments:
-  1. Input .csv file or directory with multiple .csv files
+  1. Todoist API token
   2. Output file path
   3. [Optional] Use either -a or --append-output to append output to the file instead of overwriting it
