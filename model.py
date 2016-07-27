@@ -3,6 +3,7 @@ from operator import itemgetter
 from dateutil import parser
 import datetime
 from datetime import date
+from parse import *
 
 def process_todoist_resources(user_resources):
     """Process Todoist user resources and return a list of project dictionaries"""
@@ -73,13 +74,18 @@ def process_todoist_project(project, initial_heading_level=1):
         "%s %s" % (stars, project["name"]),
     ]
 
+    # If this project is the Inbox project, then none of its items are TODOs
+    todo = True
+    if project["name"] == "Inbox":
+        todo = False
+
     # Process each item
     for item in project["items"]:
-        output_lines.extend(process_todoist_item(item, stars))
+        output_lines.extend(process_todoist_item(item, stars, todo))
 
     return output_lines
 
-def process_todoist_item(item, project_stars):
+def process_todoist_item(item, project_stars, todo=True):
     content = item["content"]
     priority = item["priority"]
     indent = item["indent"]
@@ -107,7 +113,11 @@ def process_todoist_item(item, project_stars):
     }[priority]
 
     # Add lines to the output_lines list
-    output_lines.append("%s TODO %s%s" % (stars, priority, content))
+    if todo:
+        output_lines.append("%s TODO %s%s" % (stars, priority, content))
+    else:
+        output_lines.append("%s %s%s" % (stars, priority, content))
+
     if due_date_utc is not None:
         timestamp = org_timestamp(due_date_utc, date_string, all_day)
         output_lines.append("%s SCHEDULED: %s" % (spaces, timestamp))
