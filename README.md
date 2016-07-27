@@ -5,8 +5,10 @@ Transform Todoist projects into Org-mode files
 Given a Todoist API token, main.py will retrieve project, task and comment data from Todoist using the official API available [here](https://developer.todoist.com/). The program will then transform this data into Emacs Org format into the file you specify.
 
 ## Python Library Dependencies
+  - [dateutil](https://dateutil.readthedocs.io/en/stable/)
+  - [parse](https://pypi.python.org/pypi/parse)
+  - [pytz](https://pypi.python.org/pypi/pytz)
   - urllib
-  - dateutil
   - datetime
 
 ## How to run the program
