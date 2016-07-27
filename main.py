@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import sys, os.path, os, urllib, json
 import model
-from fnmatch import fnmatch
 from urllib.request import urlopen
 from urllib.parse import urlencode
 
