@@ -53,19 +53,16 @@ def process_todoist_resources(user_resources):
     return projects, user_resources["user"]["tz_info"]["timezone"]
 
 def process_todoist_projects(projects, my_timezone):
-    output_lines = [
-        "* Projects",
-        "#+CATEGORY: Projects"
-    ]
+    output_lines = []
 
     # Process each project and add the resulting Org lines onto the end of
     # output_lines
     for project in projects:
-        output_lines.extend(process_todoist_project(project, my_timezone))
+        output_lines.extend(process_todoist_project(project, my_timezone, initial_heading_level=0))
 
     return output_lines
 
-def process_todoist_project(project, my_timezone, initial_heading_level=1):
+def process_todoist_project(project, my_timezone, initial_heading_level=0):
     """Translate a Todoist project and return a list of lines to add to the
     output Org file"""
     # Generate the stars using the indent value
@@ -73,8 +70,13 @@ def process_todoist_project(project, my_timezone, initial_heading_level=1):
     indent = project["indent"]
     for x in range(0, indent + initial_heading_level): stars += "*"
 
+    spaces = stars.replace("*", " ")
     output_lines = [
         "%s %s" % (stars, project["name"]),
+        # Make a CATEGORY property tag for each project
+        "%s :PROPERTIES:" % spaces,
+        "%s :CATEGORY: %s" % (spaces, project["name"]),
+        "%s :END:" % spaces,
     ]
 
     # If this project is the Inbox project, then none of its items are TODOs
