@@ -1,8 +1,9 @@
 #!/usr/bin/python
 from operator import itemgetter
-from dateutil import parser
+from dateutil import parser as date_parser
 import datetime
 from datetime import date
+from pytz import timezone
 from parse import *
 
 def process_todoist_resources(user_resources):
@@ -47,9 +48,11 @@ def process_todoist_resources(user_resources):
         item["notes"] = sorted(item["notes"], key=itemgetter("id"))
 
     projects = sorted(projects, key=itemgetter("item_order"))
-    return projects
 
-def process_todoist_projects(projects):
+    # Return the projects as well as the timezone
+    return projects, user_resources["user"]["tz_info"]["timezone"]
+
+def process_todoist_projects(projects, my_timezone):
     output_lines = [
         "* Projects",
         "#+CATEGORY: Projects"
@@ -58,11 +61,11 @@ def process_todoist_projects(projects):
     # Process each project and add the resulting Org lines onto the end of
     # output_lines
     for project in projects:
-        output_lines.extend(process_todoist_project(project))
+        output_lines.extend(process_todoist_project(project, my_timezone))
 
     return output_lines
 
-def process_todoist_project(project, initial_heading_level=1):
+def process_todoist_project(project, my_timezone, initial_heading_level=1):
     """Translate a Todoist project and return a list of lines to add to the
     output Org file"""
     # Generate the stars using the indent value
@@ -81,11 +84,11 @@ def process_todoist_project(project, initial_heading_level=1):
 
     # Process each item
     for item in project["items"]:
-        output_lines.extend(process_todoist_item(item, stars, todo))
+        output_lines.extend(process_todoist_item(item, stars, my_timezone, todo))
 
     return output_lines
 
-def process_todoist_item(item, project_stars, todo=True):
+def process_todoist_item(item, project_stars, my_timezone, todo=True):
     content = item["content"]
     priority = item["priority"]
     indent = item["indent"]
@@ -119,7 +122,7 @@ def process_todoist_item(item, project_stars, todo=True):
         output_lines.append("%s %s%s" % (stars, priority, content))
 
     if due_date_utc is not None:
-        timestamp = org_timestamp(due_date_utc, date_string, all_day)
+        timestamp = org_timestamp(due_date_utc, date_string, all_day, my_timezone)
         output_lines.append("%s SCHEDULED: %s" % (spaces, timestamp))
 
     # Text under headings appears to be placed after the lines normally
@@ -131,22 +134,54 @@ def process_todoist_item(item, project_stars, todo=True):
     output_lines.append("") # Add an empty line after each heading's content
     return output_lines
 
-def org_timestamp(due_date_utc, date_string, all_day):
-    dateobj = parser.parse(due_date_utc)
+def org_timestamp(due_date_utc, date_string, all_day, my_timezone):
+    # Parse the UTC due date
+    dateobj = date_parser.parse(due_date_utc)
 
+    # Convert from UTC to local timezone as set in Todoist settings
+    dateobj = dateobj.astimezone(timezone(my_timezone))
+
+    # Don't add the time if the task is an "all-day" task
     if all_day:
-        # Don't add the time if the task is an "all-day" task
         timestamp = dateobj.strftime("<%Y-%m-%d %a>")
     else:
         timestamp = dateobj.strftime("<%Y-%m-%d %a %H:%M>")
+
+    # Transform the timestamp if the current task is recurring
     timestamp = transform_if_recurring(timestamp, date_string)
     return timestamp
 
-
 def transform_if_recurring(timestamp, date_string):
-    if "every" in date_string.lower():
-        # TODO implement this
-        pass
-        # print(date_string)
+    date_string = date_string.lower()
+    recurring_task_identifiers = [
+        "every",
+        "daily",
+        "weekly",
+        "monthly",
+        "yearly",
+    ]
+
+    # Check if the date_string is indicative of a recurring task
+    recurring = False
+    for identifier in recurring_task_identifiers:
+        if identifier in date_string:
+            recurring = True
+            break
+
+    if recurring:
+        # Remove the ">" on the end of the timestamp
+        timestamp = timestamp[0:len(timestamp) - 1]
+
+        # Add an Org repeater using date_string
+        timestamp = "%s%s>" % (timestamp, make_org_repeater(date_string))
 
     return timestamp
+
+def make_org_repeater(date_string):
+    # TODO implement this
+    # Grammar for Todoist recurring date parsing
+    # date: "every" [n] period [at] [time] | recurring_period
+    period = ["day", "morning", "evening", "weekday", "days", "week", "month", "year"]
+    weekday = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    # parse("every {}", "every week")
+    return ""

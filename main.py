@@ -24,7 +24,7 @@ def read_todoist_resources(token):
     See https://developer.todoist.com/#read-resources
 
     token should be a string representation of the users API token, e.g. '0123456789abcdef0123456789abcdef01234567'"""
-    resource_types = '["items", "notes", "projects"]'
+    resource_types = '["items", "notes", "projects", "user"]'
     url = "https://todoist.com/API/v7/sync"
     data = urlencode({
         "token": token,
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         print_usage("Error: wrong number of arguments")
         exit()
 
-    user_resources = {"projects": [], "items": [], "notes": []}
+    user_resources = {"projects": [], "items": [], "notes": [], "users": []}
     api_token = args[0]
 
     # Use the API token to get the user resources
@@ -96,11 +96,11 @@ if __name__ == '__main__':
         append = False
 
     # Process the user resources
-    projects = model.process_todoist_resources(user_resources)
+    projects, my_timezone = model.process_todoist_resources(user_resources)
 
     # One file for all projects
     if os.path.isfile(args[1]):
-        output_lines = model.process_todoist_projects(projects)
+        output_lines = model.process_todoist_projects(projects, my_timezone)
         write_to_file(args[1], output_lines, append)
         print("Successfully created and populated '%s'!" % os.path.basename(args[1]))
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     elif os.path.isdir(args[1]):
         for project in projects:
             output_lines = ["#+%s" % project["name"]]
-            output_lines.extend(model.process_todoist_project(project, initial_heading_level=0))
+            output_lines.extend(model.process_todoist_project(project, my_timezone, initial_heading_level=0))
 
             # Construct a file path for the project file
             output_filepath = os.path.join(args[1], project["name"] + ".org")
