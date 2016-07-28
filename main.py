@@ -107,8 +107,7 @@ if __name__ == '__main__':
     # One file for each project
     elif os.path.isdir(args[1]):
         for project in projects:
-            output_lines = ["#+%s" % project["name"]]
-            output_lines.extend(model.process_todoist_project(project, my_timezone, initial_heading_level=0))
+            output_lines = model.process_todoist_project(project, my_timezone, initial_heading_level=0)
 
             # Construct a file path for the project file
             output_filepath = os.path.join(args[1], project["name"] + ".org")
