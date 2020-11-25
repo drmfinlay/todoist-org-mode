@@ -16,3 +16,6 @@ Run main.py with the following arguments:
   1. Todoist API token
   2. Output file path
   3. [Optional] Use either -a or --append-output to append output to the file instead of overwriting it
+
+## License
+This is free software licensed under the MIT licence.
