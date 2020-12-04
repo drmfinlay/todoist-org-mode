@@ -92,7 +92,8 @@ def generate_all_headings(state, include_archived):
 
     :param state: Todoist 'Sync' API state dictionary
     :type state: dict
-    :param include_archived: whether to include archived projects in the output
+    :param include_archived: whether to include archived projects or sections in the
+        output
     :type include_archived: bool
     :returns: heading strings
     """
@@ -120,7 +121,7 @@ def generate_all_headings(state, include_archived):
 
     # Generate and yield Org mode headings.
     for project in state["projects"]:
-        # Skip archived projects if it is requested.
+        # Skip archived projects if requested.
         if not include_archived and project["is_archived"]:
             continue
 
@@ -135,11 +136,12 @@ def generate_all_headings(state, include_archived):
         project_sections = section_list_dict[project["id"]]
         for heading in generate_project_subheadings(state, project_items,
                                                     project_sections, project_level,
-                                                    label_names_dict):
+                                                    label_names_dict,
+                                                    include_archived):
             yield heading
 
 
-def generate_project_headings(state, project_id):
+def generate_project_headings(state, project_id, include_archived):
     """
     Generate Org mode headings for the specified Todoist project, including headings
     for all associated sections and items.
@@ -150,6 +152,8 @@ def generate_project_headings(state, project_id):
     :type state: dict
     :param project_id: Todoist project ID
     :type project_id: int
+    :param include_archived: whether to include archived sections in the output
+    :type include_archived: bool
     :returns: heading strings
     """
     # Prepare required dictionaries and lists.
@@ -173,12 +177,12 @@ def generate_project_headings(state, project_id):
     # Generate the subheadings for sections and items.
     for heading in generate_project_subheadings(state, project_items,
                                                 project_sections, project_level,
-                                                label_names_dict):
+                                                label_names_dict, include_archived):
         yield heading
 
 
 def generate_project_subheadings(state, project_items, project_sections,
-                                 project_level, label_names_dict):
+                                 project_level, label_names_dict, include_archived):
     """
     Generate Org mode subheadings for the specified project.
 
@@ -194,8 +198,11 @@ def generate_project_subheadings(state, project_items, project_sections,
     :type project_level: int
     :param label_names_dict: dictionary of label IDs to label names
     :type label_names_dict: dict
+    :param include_archived: whether to include archived sections in the output
+    :type include_archived: bool
     :returns: subheading strings
     """
+    # pylint: disable=too-many-arguments
     # Sort the project sections list by section order.
     project_sections.sort(key=lambda section: section["section_order"])
 
@@ -215,6 +222,10 @@ def generate_project_subheadings(state, project_items, project_sections,
         else:
             section_id = section["id"]
             item_level = project_level + 2
+
+            # Skip archived sections if requested.
+            if not include_archived and section["is_archived"]:
+                continue
 
             # Generate a subheading for the current item's section.
             yield get_section_heading(state, section, project_level + 1)
@@ -384,9 +395,12 @@ def get_section_heading(state, section, heading_level):
     user_tz = state["user"]["tz_info"]["timezone"]
     date_added_timestamp = get_org_timestamp(section["date_added"], user_tz, False)
 
+    # Add a special :IS_ARCHIVED: tag if this section is archived.
+    tags = ["IS_ARCHIVED"] if section["is_archived"] else []
+
     # Return each line of the heading with a newline afterwards.
     return "\n".join(
-        get_heading_lines(heading_level, "", section["name"],
+        get_heading_lines(heading_level, "", section["name"], tags=tags,
                           CREATED=date_added_timestamp)
     ) + "\n"
 
