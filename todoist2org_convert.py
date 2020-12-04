@@ -64,6 +64,10 @@ def _main():
         "-o", "--output-file", type=argparse.FileType("w"),
         help="Output file path."
     )
+    parser.add_argument(
+        "-a", "--include-archived", default=False, action="store_true",
+        help="Included archived projects in the output."
+    )
 
     # Parse command-line arguments from sys.argv.
     args = parser.parse_args()
@@ -99,7 +103,8 @@ def _main():
         for line in todoist2org.generate_file_header(api.state, title):
             out.write(line + "\n")
         out.write("\n")
-        for heading in todoist2org.generate_all_headings(api.state):
+        for heading in todoist2org.generate_all_headings(api.state,
+                                                         args.include_archived):
             out.write(heading + "\n")
 
 

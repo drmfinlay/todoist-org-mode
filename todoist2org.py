@@ -84,7 +84,7 @@ def generate_file_header(state, title):
     yield "#+TITLE: %s" % title
 
 
-def generate_all_headings(state):
+def generate_all_headings(state, include_archived):
     """
     Generate Org mode headings for all Todoist projects, sections and items.
 
@@ -92,6 +92,8 @@ def generate_all_headings(state):
 
     :param state: Todoist 'Sync' API state dictionary
     :type state: dict
+    :param include_archived: whether to include archived projects in the output
+    :type include_archived: bool
     :returns: heading strings
     """
     # Prepare required dictionaries.
@@ -118,6 +120,10 @@ def generate_all_headings(state):
 
     # Generate and yield Org mode headings.
     for project in state["projects"]:
+        # Skip archived projects if it is requested.
+        if not include_archived and project["is_archived"]:
+            continue
+
         # Calculate the project's indentation level.
         project_level = get_project_level(project["id"], projects_dict)
 
@@ -350,10 +356,14 @@ def get_project_root_heading(project, heading_level):
     :returns: heading string
     :rtype: str
     """
+    # Add a special :IS_ARCHIVED: tag if this project is archived.
+    tags = ["IS_ARCHIVED"] if project["is_archived"] else []
+
     # Return each line of the heading with a newline afterwards.
     project_name = project["name"]
     return "\n".join(
-        get_heading_lines(heading_level, "", project_name, CATEGORY=project_name)
+        get_heading_lines(heading_level, "", project_name, tags=tags,
+                          CATEGORY=project_name)
     ) + "\n"
 
 
