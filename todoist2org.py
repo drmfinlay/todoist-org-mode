@@ -31,6 +31,7 @@ sections and items. It is intended to be used with data retrieved via the Todois
 
 """
 
+from datetime import datetime
 import logging
 
 from dateutil import parser as date_parser
@@ -64,6 +65,23 @@ def _warn_about_recurring_due_dates(items):
                     ":IS_RECURRING: for manual user conversion.\nSee the Org Manual "
                     "'Repeated Tasks' section for how to do this: "
                     "https://orgmode.org/manual/Repeated-tasks.html")
+
+
+def generate_file_header(state, title):
+    """
+    Generate an Org mode file header using Todoist user data and the specified title.
+
+    This is a generator function that returns Org mode file header strings.
+
+    :param state: Todoist 'Sync' API state dictionary
+    :type state: dict
+    :param title: title of the Org mode file
+    :type title: str
+    :returns: file heading strings
+    """
+    yield "#+AUTHOR: %s" % state["user"]["full_name"]
+    yield "#+DATE: %s" % datetime.now().strftime("[%Y-%m-%d %a %H:%M]")
+    yield "#+TITLE: %s" % title
 
 
 def generate_all_headings(state):
