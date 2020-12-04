@@ -136,7 +136,7 @@ def generate_all_headings(state, include_archived):
             continue
 
         # Calculate the project's indentation level.
-        project_level = get_project_level(project["id"], projects_dict)
+        project_level = get_object_level(project["id"], projects_dict)
 
         # Generate the root project heading.
         yield get_project_root_heading(project, project_level)
@@ -179,7 +179,7 @@ def generate_project_headings(state, project_id, include_archived):
 
     # Get the project and calculate the indentation level.
     project = projects_dict[project_id]
-    project_level = get_project_level(project_id, projects_dict)
+    project_level = get_object_level(project_id, projects_dict)
 
     # Generate the root project heading.
     yield get_project_root_heading(project, project_level)
@@ -223,47 +223,56 @@ def generate_project_subheadings(state, project_items, project_sections,
     for item in project_items:
         section_item_lists[item["section_id"]].append(item)
 
+    # Prepare a dictionary of item IDs to items to be used for calculating item
+    # levels.
+    item_dict = {item["id"]: item for item in project_items}
+
     # Generate subheadings from project sections and items in order with items that
     # don't belong to any section first.
     for section in [None] + project_sections:
         if section is None:
             section_id = None
-            item_level = project_level + 1
+            section_level = project_level
         else:
             section_id = section["id"]
-            item_level = project_level + 2
+            section_level = project_level + 1
 
             # Skip archived sections if requested.
             if not include_archived and section["is_archived"]:
                 continue
 
             # Generate a subheading for the current item's section.
-            yield get_section_heading(state, section, project_level + 1)
+            yield get_section_heading(state, section, section_level)
 
         # Generate item subheadings.
         for item in section_item_lists[section_id]:
+            item_level = section_level + get_object_level(item["id"], item_dict)
             yield get_item_heading(state, item, item_level, label_names_dict)
 
 
-def get_project_level(project_id, projects):
+def get_object_level(object_id, objects):
     """
-    Get the indentation level of the specified project. This will be an integer
-    between 1 and 4.
+    Get the indentation level of the specified project or item. This will typically
+    be an integer between 1 and 4.
 
-    :param project_id: Todoist project ID
-    :type project_id: int
-    :param projects: dictionary of project IDs to Project objects
-    :type projects: dict
-    :returns: project indentation level
+    If this function is used to calculate an item's level, it will **not** calculate
+    and add the project level too. A separate call is required for that.
+
+    :param object_id: Todoist project or item ID
+    :type object_id: int
+    :param objects: dictionary of object IDs to objects
+    :type objects: dict
+    :returns: object indentation level
     :rtype: int
     """
-    # Check if this project has a parent. If it doesn't, then it is a level 1
-    # project. Otherwise, the indentation level is 1 plus the parent project's level.
-    project = projects[project_id]
-    parent_id = project["parent_id"]
+    # Check if this project or item has a parent. If it doesn't, then it is a level 1
+    # project or item. Otherwise, the indentation level is 1 plus the parent object's
+    # level.
+    obj = objects[object_id]
+    parent_id = obj["parent_id"]
     if parent_id is None:
         return 1
-    return 1 + get_project_level(parent_id, projects)
+    return 1 + get_object_level(parent_id, objects)
 
 
 def get_org_timestamp(timestamp, timezone, active):
