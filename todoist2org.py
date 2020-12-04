@@ -105,13 +105,23 @@ def generate_all_headings(state, include_archived):
     # Put sections into lists associated with each project.
     section_list_dict = {project["id"]: [] for project in state["projects"]}
     for section in state["sections"]:
-        section_list_dict[section["project_id"]].append(section)
+        # Skip sections of deleted projects.
+        project_id = section["project_id"]
+        if project_id not in section_list_dict:
+            continue
+
+        section_list_dict[project_id].append(section)
 
     # Project ID -> Items dictionary.
     # Put items into lists associated with each project.
     item_list_dict = {project["id"]: [] for project in state["projects"]}
     for item in state["items"]:
-        item_list_dict[item["project_id"]].append(item)
+        # Skip items of deleted projects.
+        project_id = item["project_id"]
+        if project_id not in item_list_dict:
+            continue
+
+        item_list_dict[project_id].append(item)
 
     # Label ID -> Label names dictionary.
     label_names_dict = {label["id"]: label for label in state["labels"]}
