@@ -223,9 +223,12 @@ def generate_project_subheadings(state, project_items, project_sections,
     for item in project_items:
         section_item_lists[item["section_id"]].append(item)
 
-    # Prepare a dictionary of item IDs to items to be used for calculating item
-    # levels.
-    item_dict = {item["id"]: item for item in project_items}
+    # Prepare a dictionary of item parent IDs to child items.
+    item_children = {item["id"]: [] for item in project_items}
+    for item in project_items:
+        parent_id = item["parent_id"]
+        if parent_id:
+            item_children[parent_id].append(item)
 
     # Generate subheadings from project sections and items in order with items that
     # don't belong to any section first.
@@ -245,9 +248,45 @@ def generate_project_subheadings(state, project_items, project_sections,
             yield get_section_heading(state, section, section_level)
 
         # Generate item subheadings.
-        for item in section_item_lists[section_id]:
-            item_level = section_level + get_object_level(item["id"], item_dict)
-            yield get_item_heading(state, item, item_level, label_names_dict)
+        # Pass only top-level items in this section with no parent items. Child items
+        # will be handled recursively.
+        items = [item for item in section_item_lists[section_id]
+                 if item["parent_id"] is None]
+        for heading in generate_item_headings(state, items, section_level + 1,
+                                              item_children, label_names_dict):
+            yield heading
+
+
+def generate_item_headings(state, items, heading_level, item_children,
+                           label_names_dict):
+    """
+    Generate Org mode headings for the specified items and any child items.
+
+    This is a generator function that returns strings in Org mode format.
+
+    :param state: Todoist 'Sync' API state dictionary
+    :type state: dict
+    :param items: list of items to generate headings for
+    :type items: list
+    :param heading_level: heading indentation level
+    :type heading_level: int
+    :param item_children: dictionary of item parent IDs to items
+    :type item_children: dict
+    :param label_names_dict: dictionary of label IDs to label names
+    :type label_names_dict: dict
+    :returns: heading strings
+    """
+    # Sort the items list by child order.
+    items.sort(key=lambda i: i["child_order"])
+    for item in items:
+        # Generate a heading for this item.
+        yield get_item_heading(state, item, heading_level, label_names_dict)
+
+        # Generate headings for any child items recursively.
+        children = item_children[item["id"]]
+        for heading in generate_item_headings(state, children, heading_level + 1,
+                                              item_children, label_names_dict):
+            yield heading
 
 
 def get_object_level(object_id, objects):
