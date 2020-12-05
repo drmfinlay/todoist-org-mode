@@ -102,7 +102,7 @@ special Inbox project and write an Inbox.org file:
        for line in todoist2org.generate_file_header(api.state, "Inbox"):
            f.write(line + "\n")
        f.write("\n")
-       for heading in todoist2org.generate_project_headings(api.state, project_id):
+       for heading in todoist2org.generate_project_headings(api.state, project_id, False):
            f.write(heading + "\n")
 
 
@@ -122,11 +122,12 @@ Limitations
 - Project notes, item notes/comments, calendar feeds, reminders and templates are
   **not** brought over in the conversion process.
 
-- Archived projects are not included by default. There is an optional CLI ``-a`` /
-  ``--include-archived`` argument and equivalent library function parameter that can
-  be used to include archived projects. If these are used, archived projects are
-  tagged with ``:IS_ARCHIVED:`` and output in roughly their original positions in the
-  projects list. They are not filed under a separate heading.
+- Archived projects and sections are not included by default. There is an optional
+  CLI ``-a`` / ``--include-archived`` argument and equivalent library function
+  parameters that can be used to include archived projects and sections. If these are
+  used, archived projects and sections will be tagged with ``:IS_ARCHIVED:`` and
+  output in roughly their original positions as if they were never archived. They
+  will not be filed under a separate heading.
 
 
 License
