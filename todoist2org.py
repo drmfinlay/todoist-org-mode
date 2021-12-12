@@ -386,7 +386,7 @@ def get_heading_lines(heading_level, todo_state, content, priority=1,
         2: "[#C] ",
         1: "",  # no priority
     }[priority]
-    tags_str = " :%s:" % ":".join(tags) if tags else ""
+    tags_str = " :%s:" % ":".join((str(tag) for tag in tags)) if tags else ""
     todo_state_str = todo_state + " " if todo_state else ""
 
     # Construct and yield the first line of the heading.
