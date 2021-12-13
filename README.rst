@@ -119,7 +119,7 @@ Limitations
   <https://orgmode.org/manual/Repeated-tasks.html>`__ section for how to specify
   recurring due dates in Org mode.
 
-- Project notes, item notes/comments, calendar feeds, reminders and templates are
+- Project comments, item comments, calendar feeds, reminders and templates are
   **not** brought over in the conversion process.
 
 - Archived projects and sections are not included by default. There is an optional
