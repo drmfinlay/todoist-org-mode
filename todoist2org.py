@@ -350,7 +350,8 @@ def get_org_timestamp(timestamp, timezone, active):
 
 
 def get_heading_lines(heading_level, todo_state, content, priority=1,
-                      tags=None, timestamps=None, **properties):
+                      tags=None, timestamps=None, description="",
+                      **properties):
     """
     Get each line of an Org mode heading.
 
@@ -368,6 +369,8 @@ def get_heading_lines(heading_level, todo_state, content, priority=1,
     :type tags: list
     :param timestamps: timestamps to use on line 2 (if any)
     :type timestamps: HeadingTimestamps
+    :param description: description for the heading
+    :type description: str
     :param properties: keyword names and values representing heading properties
     :returns: heading lines
     """
@@ -412,6 +415,14 @@ def get_heading_lines(heading_level, todo_state, content, priority=1,
         for name, value in properties.items():
             yield "%s :%s: %s" % (spaces, name, value)
         yield "%s :END:" % spaces
+
+    # Yield indented description lines if necessary.
+    if description:
+        for line in description.split("\n"):
+            if not line:
+                yield ""
+            else:
+                yield "%s %s" % (spaces, line)
 
 
 def get_project_root_heading(project, heading_level):
@@ -514,5 +525,6 @@ def get_item_heading(state, item, heading_level, labels):
     # Return each line of the heading with a newline afterwards.
     return "\n".join(
         get_heading_lines(heading_level, todo_state, item["content"], priority,
-                          tags, timestamps, CREATED=date_added_timestamp)
+                          tags, timestamps, item["description"],
+                          CREATED=date_added_timestamp)
     ) + "\n"
