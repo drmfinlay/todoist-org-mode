@@ -386,11 +386,8 @@ def get_heading_lines(heading_level, todo_state, content, priority=1,
         2: "[#C] ",
         1: "",  # no priority
     }[priority]
-    if not tags or len(tags) == 0:
-        tags_str = ""
-    else:
-        tags_str = " :%s:" % ":".join([tag if isinstance(tag, str) else tag.data["name"] for tag in tags])
     todo_state_str = todo_state + " " if todo_state else ""
+    tags_str = " :%s:" % ":".join(tags) if tags else ""
 
     # Construct and yield the first line of the heading.
     yield "%s %s%s%s%s" % (stars, todo_state_str, priority_str, content, tags_str)
@@ -488,7 +485,11 @@ def get_item_heading(state, item, heading_level, labels):
     due_info = item["due"]
     priority = item["priority"]
     todo_state = "DONE" if date_completed else "TODO"
-    tags = [labels[label_id] for label_id in item["labels"]]
+
+    # Use an ordered list of this item's labels as Org tags.
+    item_labels = [labels[label_id] for label_id in item["labels"]]
+    item_labels.sort(key=lambda l: l["item_order"])
+    tags = [label["name"] for label in item_labels]
 
     # Get the CLOSED/SCHEDULED timestamps if necessary.
     timestamps = HeadingTimestamps()
