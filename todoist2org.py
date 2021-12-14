@@ -33,6 +33,7 @@ sections and items. It is intended to be used with data retrieved via the Todois
 
 from datetime import datetime
 import logging
+import re
 
 from dateutil import parser as date_parser
 import pytz
@@ -349,6 +350,30 @@ def get_org_timestamp(timestamp, timezone, active):
     return dateobj.strftime(time_format_string)
 
 
+def convert_markdown_to_org(content):
+    """
+    Convert markdown in a content string to the equivalent Org format.
+
+    The original string will be returned if no conversion is necessary.
+
+    Currently, this method only converts hyperlinks.
+
+    :param content: content string
+    :type content: str
+    :returns: converted content string
+    :rtype: str
+    """
+    # Convert and replace any markdown hyperlinks in the content string.
+    md_hyperlink_p = re.compile(r"(\[(?!\]).+?\])(\((?!\)).+?\))")
+    for match in md_hyperlink_p.finditer(content):
+        link_text = match.group(1)[1:-1]
+        linkurl = match.group(2)[1:-1]
+        org_hyperlink = "[[%s][%s]]" % (linkurl, link_text)
+        content = content.replace(match.group(0), org_hyperlink)
+
+    return content
+
+
 def get_heading_lines(heading_level, todo_state, content, priority=1,
                       tags=None, timestamps=None, description="",
                       **properties):
@@ -497,6 +522,10 @@ def get_item_heading(state, item, heading_level, labels):
     priority = item["priority"]
     todo_state = "DONE" if date_completed else "TODO"
 
+    # Retrieve the item's content and description. Convert markdown as necessary.
+    content = convert_markdown_to_org(item["content"])
+    description = convert_markdown_to_org(item["description"])
+
     # Use an ordered list of this item's labels as Org tags.
     item_labels = [labels[label_id] for label_id in item["labels"]]
     item_labels.sort(key=lambda l: l["item_order"])
@@ -528,7 +557,7 @@ def get_item_heading(state, item, heading_level, labels):
 
     # Return each line of the heading with a newline afterwards.
     return "\n".join(
-        get_heading_lines(heading_level, todo_state, item["content"], priority,
-                          tags, timestamps, item["description"],
+        get_heading_lines(heading_level, todo_state, content, priority,
+                          tags, timestamps, description,
                           CREATED=date_added_timestamp)
     ) + "\n"
