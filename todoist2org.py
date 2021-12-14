@@ -123,8 +123,8 @@ def generate_all_headings(state, include_archived):
 
         item_list_dict[project_id].append(item)
 
-    # Label ID -> Label names dictionary.
-    label_names_dict = {label["id"]: label for label in state["labels"]}
+    # Label ID -> label dictionary.
+    label_dict = {label["id"]: label for label in state["labels"]}
 
     # Log a warning if any tasks have recurring due dates.
     _warn_about_recurring_due_dates(state["items"])
@@ -146,7 +146,7 @@ def generate_all_headings(state, include_archived):
         project_sections = section_list_dict[project["id"]]
         for heading in generate_project_subheadings(state, project_items,
                                                     project_sections, project_level,
-                                                    label_names_dict,
+                                                    label_dict,
                                                     include_archived):
             yield heading
 
@@ -172,7 +172,7 @@ def generate_project_headings(state, project_id, include_archived):
                         if section["project_id"] == project_id]
     project_items = [item for item in state["items"]
                      if item["project_id"] == project_id]
-    label_names_dict = {label["id"]: label for label in state["labels"]}
+    label_dict = {label["id"]: label for label in state["labels"]}
 
     # Log a warning if any tasks have recurring due dates.
     _warn_about_recurring_due_dates(project_items)
@@ -187,12 +187,12 @@ def generate_project_headings(state, project_id, include_archived):
     # Generate the subheadings for sections and items.
     for heading in generate_project_subheadings(state, project_items,
                                                 project_sections, project_level,
-                                                label_names_dict, include_archived):
+                                                label_dict, include_archived):
         yield heading
 
 
 def generate_project_subheadings(state, project_items, project_sections,
-                                 project_level, label_names_dict, include_archived):
+                                 project_level, label_dict, include_archived):
     """
     Generate Org mode subheadings for the specified project.
 
@@ -206,8 +206,8 @@ def generate_project_subheadings(state, project_items, project_sections,
     :type project_sections: list
     :param project_level: project indentation level
     :type project_level: int
-    :param label_names_dict: dictionary of label IDs to label names
-    :type label_names_dict: dict
+    :param label_dict: dictionary of label IDs to label
+    :type label_dict: dict
     :param include_archived: whether to include archived sections in the output
     :type include_archived: bool
     :returns: subheading strings
@@ -253,12 +253,12 @@ def generate_project_subheadings(state, project_items, project_sections,
         items = [item for item in section_item_lists[section_id]
                  if item["parent_id"] is None]
         for heading in generate_item_headings(state, items, section_level + 1,
-                                              item_children, label_names_dict):
+                                              item_children, label_dict):
             yield heading
 
 
 def generate_item_headings(state, items, heading_level, item_children,
-                           label_names_dict):
+                           label_dict):
     """
     Generate Org mode headings for the specified items and any child items.
 
@@ -272,20 +272,20 @@ def generate_item_headings(state, items, heading_level, item_children,
     :type heading_level: int
     :param item_children: dictionary of item parent IDs to items
     :type item_children: dict
-    :param label_names_dict: dictionary of label IDs to label names
-    :type label_names_dict: dict
+    :param label_dict: dictionary of label IDs to label
+    :type label_dict: dict
     :returns: heading strings
     """
     # Sort the items list by child order.
     items.sort(key=lambda i: i["child_order"])
     for item in items:
         # Generate a heading for this item.
-        yield get_item_heading(state, item, heading_level, label_names_dict)
+        yield get_item_heading(state, item, heading_level, label_dict)
 
         # Generate headings for any child items recursively.
         children = item_children[item["id"]]
         for heading in generate_item_headings(state, children, heading_level + 1,
-                                              item_children, label_names_dict):
+                                              item_children, label_dict):
             yield heading
 
 
@@ -389,8 +389,8 @@ def get_heading_lines(heading_level, todo_state, content, priority=1,
         2: "[#C] ",
         1: "",  # no priority
     }[priority]
-    tags_str = " :%s:" % ":".join(tags) if tags else ""
     todo_state_str = todo_state + " " if todo_state else ""
+    tags_str = " :%s:" % ":".join(tags) if tags else ""
 
     # Construct and yield the first line of the heading.
     yield "%s %s%s%s%s" % (stars, todo_state_str, priority_str, content, tags_str)
@@ -484,7 +484,7 @@ def get_item_heading(state, item, heading_level, labels):
     :type item: Item
     :param heading_level: heading indentation level
     :type heading_level: int
-    :param labels: dictionary of label IDs to label names
+    :param labels: dictionary of label IDs to label
     :type labels: dict
     :returns: heading string
     :rtype: str
@@ -496,7 +496,11 @@ def get_item_heading(state, item, heading_level, labels):
     due_info = item["due"]
     priority = item["priority"]
     todo_state = "DONE" if date_completed else "TODO"
-    tags = [labels[label_id] for label_id in item["labels"]]
+
+    # Use an ordered list of this item's labels as Org tags.
+    item_labels = [labels[label_id] for label_id in item["labels"]]
+    item_labels.sort(key=lambda l: l["item_order"])
+    tags = [label["name"] for label in item_labels]
 
     # Get the CLOSED/SCHEDULED timestamps if necessary.
     timestamps = HeadingTimestamps()
