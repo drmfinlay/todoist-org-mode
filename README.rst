@@ -32,9 +32,9 @@ converted locally.
 Dependencies
 ------------
 
+- `requests <https://pypi.org/project/requests>`__
 - `python-dateutil <https://dateutil.readthedocs.io/en/stable/>`__
 - `pytz <https://pypi.python.org/pypi/pytz>`__
-- `todoist-python <https://github.com/doist/todoist-python>`__
 
 
 Using this project
@@ -46,7 +46,7 @@ To use this project, follow the steps below.
 
    .. code:: shell
 
-      git clone https://github.com/Danesprite/todoist-org-mode.git
+      git clone https://github.com/drmfinlay/todoist-org-mode.git
 
 #. Open a command prompt or terminal in the repository's root directory.
 
@@ -58,7 +58,7 @@ To use this project, follow the steps below.
 
    .. code:: shell
 
-      pip install python-dateutil pytz todoist-python
+      pip install -r requirements.txt
 
 
 ``todoist2org_convert`` program usage
@@ -85,25 +85,23 @@ special Inbox project and write an Inbox.org file:
 
 .. code:: Python
 
-   import todoist
    import todoist2org
 
    # Use the API token to sync user resources.
    api_token = "0123456789abcdef0123456789abcdef01234567"
-   api = todoist.TodoistAPI(api_token)
-   api.sync()
+   state = todoist2org.sync_todoist_state(api_token)
 
-   # Assume the Inbox project is first.
-   project = api.state["projects"][0]
+   # Assume the API request was successful and the Inbox project is first.
+   project = state["projects"][0]
    project_id = project["id"]
 
    # Write an Org mode file header followed by each generated heading to Inbox.org.
    with open("Inbox.org", "w") as f:
-       for line in todoist2org.generate_file_header(api.state, "Inbox"):
+       for line in todoist2org.generate_file_header(state, "Inbox"):
            f.write(line + "\n")
        f.write("\n")
-       for heading in todoist2org.generate_project_headings(api.state, project_id, False):
-           f.write(heading + "\n")
+       for heading in todoist2org.generate_project_headings(state, project_id, False):
+        f.write(heading + "\n")
 
 
 Limitations
