@@ -123,9 +123,9 @@ Limitations
 - Archived projects and sections are not included by default. There is an optional
   CLI ``-a`` / ``--include-archived`` argument and equivalent library function
   parameters that can be used to include archived projects and sections. If these are
-  used, archived projects and sections will be tagged with ``:IS_ARCHIVED:`` and
-  output in roughly their original positions as if they were never archived. They
-  will not be filed under a separate heading.
+  used, archived projects and sections will be tagged with ``:ARCHIVED:`` and output
+  in roughly their original positions as if they were never archived. They will not
+  be filed under a separate heading.
 
 
 License

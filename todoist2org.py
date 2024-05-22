@@ -479,8 +479,8 @@ def get_project_root_heading(project, heading_level):
     :returns: heading string
     :rtype: str
     """
-    # Add a special :IS_ARCHIVED: tag if this project is archived.
-    tags = ["IS_ARCHIVED"] if project["is_archived"] else []
+    # Add a special :ARCHIVED: tag if this project is archived.
+    tags = ["ARCHIVED"] if project["is_archived"] else []
 
     # Return each line of the heading with a newline afterwards.
     project_name = project["name"]
@@ -507,8 +507,8 @@ def get_section_heading(state, section, heading_level):
     user_tz = state["user"]["tz_info"]["timezone"]
     added_at_timestamp = get_org_timestamp(section["added_at"], user_tz, False)
 
-    # Add a special :IS_ARCHIVED: tag if this section is archived.
-    tags = ["IS_ARCHIVED"] if section["is_archived"] else []
+    # Add a special :ARCHIVED: tag if this section is archived.
+    tags = ["ARCHIVED"] if section["is_archived"] else []
 
     # Return each line of the heading with a newline afterwards.
     return "\n".join(
