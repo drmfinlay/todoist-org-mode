@@ -8,8 +8,8 @@ What this project does
 ----------------------
 
 This is a `Python language <https://www.python.org/>`__ project with code to retrieve
-Todoist projects, sections and items using the Todoist `Sync API (v8)
-<https://doist.github.io/todoist-api/sync/v8/>`__ and convert them into Org mode
+Todoist projects, sections and items using the Todoist `Sync API (v9)
+<https://developer.todoist.com/sync/v9>`__ and convert them into Org mode
 headings to be written to files.
 
 `Todoist <https://todoist.com/>`__ is an application for maintaining to-do lists and
