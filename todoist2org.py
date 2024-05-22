@@ -140,8 +140,8 @@ def generate_all_headings(state, include_archived):
 
         item_list_dict[project_id].append(item)
 
-    # Label ID -> label dictionary.
-    label_dict = {label["id"]: label for label in state["labels"]}
+    # Label name -> label dictionary.
+    label_dict = {label["name"]: label for label in state["labels"]}
 
     # Log a warning if any tasks have recurring due dates.
     _warn_about_recurring_due_dates(state["items"])
@@ -223,7 +223,7 @@ def generate_project_subheadings(state, project_items, project_sections,
     :type project_sections: list
     :param project_level: project indentation level
     :type project_level: int
-    :param label_dict: dictionary of label IDs to label
+    :param label_dict: dictionary of label name to label
     :type label_dict: dict
     :param include_archived: whether to include archived sections in the output
     :type include_archived: bool
@@ -289,7 +289,7 @@ def generate_item_headings(state, items, heading_level, item_children,
     :type heading_level: int
     :param item_children: dictionary of item parent IDs to items
     :type item_children: dict
-    :param label_dict: dictionary of label IDs to label
+    :param label_dict: dictionary of label name to label
     :type label_dict: dict
     :returns: heading strings
     """
@@ -527,7 +527,7 @@ def get_item_heading(state, item, heading_level, labels):
     :type item: Item
     :param heading_level: heading indentation level
     :type heading_level: int
-    :param labels: dictionary of label IDs to label
+    :param labels: dictionary of label name to label
     :type labels: dict
     :returns: heading string
     :rtype: str
@@ -545,7 +545,7 @@ def get_item_heading(state, item, heading_level, labels):
     description = convert_markdown_to_org(item["description"])
 
     # Use an ordered list of this item's labels as Org tags.
-    item_labels = [labels[label_id] for label_id in item["labels"]]
+    item_labels = [labels[label_name] for label_name in item["labels"]]
     item_labels.sort(key=lambda l: l["item_order"])
     tags = [label["name"] for label in item_labels]
 
