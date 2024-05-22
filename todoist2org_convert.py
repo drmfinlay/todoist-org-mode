@@ -27,7 +27,7 @@
 todoist2org_convert
 
 This program retrieves Todoist projects, sections and items using the 'Sync' API
-(v8) and converts them into Org mode headings. Each heading is written to stdout or
+(v9) and converts them into Org mode headings. Each heading is written to stdout or
 to the specified output file. An Org mode file header is written before the headings.
 
 """
@@ -36,8 +36,6 @@ import argparse
 import logging
 import os
 import sys
-
-import todoist
 
 import todoist2org
 
@@ -76,14 +74,14 @@ def _main():
     logging.basicConfig(format="%(levelname)s: %(message)s")
     log = logging.getLogger()
 
-    # Use the API token to sync user resources.
-    api = todoist.TodoistAPI(args.api_token)
-    sync_response = api.sync()
+    # Use the API token to sync user resources (state).
+    todoist_state = todoist2org.sync_todoist_state(args.api_token)
 
     # Check if the sync was unsuccessful. This can happen if the API token was
     # invalid.
-    if "sync_token" not in sync_response:
-        log.error("Failed to sync Todoist data. Check your API token.")
+    if "sync_token" not in todoist_state:
+        log.error("Failed to sync Todoist data. Please check your API token.")
+        log.error("Data received: %r", todoist_state)
         exit(1)
 
     # If a file path was specified, then write to that file. Otherwise, write to
@@ -100,10 +98,10 @@ def _main():
     # Use the retrieved data to generate an Org mode file header followed by each
     # heading.
     with output_file as out:
-        for line in todoist2org.generate_file_header(api.state, title):
+        for line in todoist2org.generate_file_header(todoist_state, title):
             out.write(line + "\n")
         out.write("\n")
-        for heading in todoist2org.generate_all_headings(api.state,
+        for heading in todoist2org.generate_all_headings(todoist_state,
                                                          args.include_archived):
             out.write(heading + "\n")
 

@@ -27,17 +27,33 @@ todoist2org
 
 This module is a library for generating Org mode headings from Todoist projects,
 sections and items. It is intended to be used with data retrieved via the Todoist
-'Sync' API v8.
+'Sync' API v9.
 
 """
 
 from datetime import datetime
 import logging
 import re
+import requests
 
 from dateutil import parser as date_parser
 import pytz
 
+
+#------------------------------------------------------------------------------------
+# Sync Todoist data utility function.
+
+def sync_todoist_state(api_token):
+    """ Retrieve Todoist user resources (state) associated with an API token. """
+    headers = {"Authorization": "Bearer %s" % api_token}
+    data = {"sync_token": '*', "resource_types": '["all"]'}
+    r = requests.post("https://api.todoist.com/sync/v9/sync",
+                      headers=headers, data=data)
+    return r.json()
+
+
+#------------------------------------------------------------------------------------
+# Todoist to org conversion utilities.
 
 class HeadingTimestamps:
     """ Container for optional Org heading timestamps used on line two. """
@@ -162,7 +178,7 @@ def generate_project_headings(state, project_id, include_archived):
     :param state: Todoist 'Sync' API state dictionary
     :type state: dict
     :param project_id: Todoist project ID
-    :type project_id: int
+    :type project_id: str
     :param include_archived: whether to include archived sections in the output
     :type include_archived: bool
     :returns: heading strings
@@ -299,7 +315,7 @@ def get_object_level(object_id, objects):
     and add the project level too. A separate call is required for that.
 
     :param object_id: Todoist project or item ID
-    :type object_id: int
+    :type object_id: str
     :param objects: dictionary of object IDs to objects
     :type objects: dict
     :returns: object indentation level
@@ -332,7 +348,9 @@ def get_org_timestamp(timestamp, timezone, active):
     dateobj = date_parser.parse(timestamp)
 
     # Convert from UTC to specified timezone.
-    dateobj = dateobj.astimezone(pytz.timezone(timezone))
+    # NOTE This doesn't work in Python 2.7.
+    tz = pytz.timezone(timezone)
+    dateobj = dateobj.astimezone(tz)
 
     # Handle full-day dates.
     if "T" not in timestamp:
@@ -487,7 +505,7 @@ def get_section_heading(state, section, heading_level):
     """
     # Gather info about this section.
     user_tz = state["user"]["tz_info"]["timezone"]
-    date_added_timestamp = get_org_timestamp(section["date_added"], user_tz, False)
+    added_at_timestamp = get_org_timestamp(section["added_at"], user_tz, False)
 
     # Add a special :IS_ARCHIVED: tag if this section is archived.
     tags = ["IS_ARCHIVED"] if section["is_archived"] else []
@@ -495,7 +513,7 @@ def get_section_heading(state, section, heading_level):
     # Return each line of the heading with a newline afterwards.
     return "\n".join(
         get_heading_lines(heading_level, "", section["name"], tags=tags,
-                          CREATED=date_added_timestamp)
+                          CREATED=added_at_timestamp)
     ) + "\n"
 
 
@@ -516,11 +534,11 @@ def get_item_heading(state, item, heading_level, labels):
     """
     # Gather info about this item.
     user_tz = state["user"]["tz_info"]["timezone"]
-    date_added_timestamp = get_org_timestamp(item["date_added"], user_tz, False)
-    date_completed = item["date_completed"]
+    added_at_timestamp = get_org_timestamp(item["added_at"], user_tz, False)
+    completed_at = item["completed_at"]
     due_info = item["due"]
     priority = item["priority"]
-    todo_state = "DONE" if date_completed else "TODO"
+    todo_state = "DONE" if completed_at else "TODO"
 
     # Retrieve the item's content and description. Convert markdown as necessary.
     content = convert_markdown_to_org(item["content"])
@@ -533,9 +551,9 @@ def get_item_heading(state, item, heading_level, labels):
 
     # Get the CLOSED/SCHEDULED timestamps if necessary.
     timestamps = HeadingTimestamps()
-    if date_completed:
+    if completed_at:
         # Add the inactive CLOSED timestamp.
-        timestamps.closed = get_org_timestamp(date_completed, user_tz, False)
+        timestamps.closed = get_org_timestamp(completed_at, user_tz, False)
 
     if due_info:
         # Use the due date timezone if it is specified, otherwise use the user
@@ -559,5 +577,5 @@ def get_item_heading(state, item, heading_level, labels):
     return "\n".join(
         get_heading_lines(heading_level, todo_state, content, priority,
                           tags, timestamps, description,
-                          CREATED=date_added_timestamp)
+                          CREATED=added_at_timestamp)
     ) + "\n"
